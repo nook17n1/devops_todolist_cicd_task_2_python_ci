@@ -1,0 +1,58 @@
+name: python-deployment
+run-name: ${{ github.actor }} - ${{ github.sha }}
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  PYTHON_VERSION: 3.13
+
+jobs:
+  python-ci:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        name: Setup python ${{ env.PYTHON_VERSION }}
+        with:
+          python-version: '${{ env.PYTHON_VERSION }}' 
+
+      - name: Install Dependencies
+        run: |
+          cd ../
+          python -m pip install --upgrade pip
+          pip install flake8 coverage pytest 
+          pip install -r requirements.txt
+
+      - name: Run unit tests with coverage
+        run: |
+          coverage run -m pytest -v
+
+      - name: Show coverage report
+        run: |
+          coverage report
+
+      - name: Lint
+        run: |
+          cd ../
+          flake8 . --show-source --statistics --exit-zero
+
+      - name: Check Complexity
+        run: |
+          cd ../
+          flake8 . --statistics --max-complexity=10 --exit-zero
+
+      - name: Upload Python code
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-source-code
+          path: ./src
+          retention-days: 30
